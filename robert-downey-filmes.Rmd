@@ -1,0 +1,96 @@
+---
+title: "Robert Downey Jr. mas pode chamá-lo de Tony Stark"
+author: "Rafael Oliveira Santos"
+output:
+    html_document:
+        code_folding: "hide"
+        df_print: paged
+        theme: sandstone
+---
+
+```{r warning = FALSE, message = FALSE, error = FALSE}
+library(tidyverse)
+library(cluster)
+library(ggpubr)
+library(plotly)
+library(broom)
+library(here)
+source(here::here("code/lib.R"))
+theme_set(theme_report())
+set.seed(13)
+knitr::opts_chunk$set(tidy = FALSE,
+                      fig.width = 6,
+                      fig.height = 5,
+                      echo = TRUE)
+
+import_data("robert_downey_jr")
+filmes = read_imported_data()
+
+paleta = c("#404E4D",
+           "#92DCE5",
+           "#938BA1",
+           "#2D3142",
+           "#F4743B")
+```
+
+```{r}
+filmes <- filmes %>%
+    mutate(avaliacao_scaled = as.vector(scale(avaliacao)),
+           bilheteria_log_scaled = as.vector(scale(log10(bilheteria))))
+glimpse(filmes)
+
+```
+
+```{r}
+n_clusters = 3
+grouped_filmes <- filmes %>% 
+    select(bilheteria_log_scaled, avaliacao_scaled) %>% 
+    kmeans(centers = n_clusters, nstart = 20)  %>% 
+    augment(filmes)
+```
+Robert John Downey, Jr. é um ator,compositor e pianista de 54 anos, começou como ator aos 5 anos de idade e hoje é aclamado pelo seus papéis icônicos dando vida ao personagem nascido nas HQ`s, Tony Stark e foi o ator mais bem pago do mundo durante três anos seguidos (2013, 2014, 2015), com ganhos de $50, $75, e $80 milhões de dólares, respectivamente.
+
+```{r warning = FALSE}
+filmes %>% 
+    ggplot(aes(x = ano, y = bilheteria)) + 
+    geom_point(size = 4, color = paleta[4]) 
+```
+```{r warning = FALSE}
+filmes %>% 
+    ggplot(aes(x = bilheteria)) + 
+    geom_histogram(binwidth = 25, fill = paleta[2], color = "black") + 
+    geom_rug(size = .4) +
+    labs(title = "Distribuições de bilheteria em Milhões de dólares.",
+         x = "Bilheteria(USD)", y = "Contagem de filmes")
+```
+
+
+```{r warning = FALSE}
+grouped_filmes <- grouped_filmes %>%
+    mutate(grupo = case_when(
+        .cluster == 1 ~ "Filmes que não agradaram",
+        .cluster == 2 ~ "Filmes pipoca(MCU - Marvel Cinematic Universe)",
+        .cluster == 3 ~ "Filmes que integram a cultura Cult")
+    )
+filmes_plot <- grouped_filmes %>%
+    ggplot(aes(x = bilheteria, y = avaliacao, fill = grupo))  +
+    stat_chull(aes(color = grupo, fill = grupo, text = paste("<b>Grupo:</b>", grupo)), alpha = 0.3, geom = 'polygon') +
+    geom_point(aes(text = paste("<b>Filme:</b>", filme, "<br><b>Bilheteria:</b> US$", round(bilheteria, 1),
+                                "mi<br><b>Avaliação (RT):</b>", avaliacao, "<br><b>Ano:</b>", ano)),
+               size = 4, shape = 21, color = 'gray25') +
+    labs(title = "Robert Downey Jr, avaliações e arrecadações.",
+         x = "Bilheteria(USD)", y = "Avaliação(Rotten Tomatoes)") +
+    scale_x_log10() +
+    theme(legend.position = 'none', plot.title = element_text(hjust = 0.5))
+ggplotly(filmes_plot, tooltip = c('text'))
+```
+
+## Grupo: Filmes Cult
+Nessa categoria podemos encontrar filmes que quando foram lançados não geraram tanta bilheteria, mas, teve avaliações muito boas tanto no Rotten Tomatoes(que é o nosso foco) como também no IMDB, mesmo após esse tempo todo.  Exemplo: Zodiaco, um filme que conta a história do assassino do Zodiaco que particularmente é ótimo e já possui até uma certa idade que foi lançado e está presente nesse grupo de filmes.
+
+
+## Grupo: Filmes que não agradaram
+Foram filmes que nem agradaram o público no geral, como também não agradaram em avaliações. Dentro desse grupo de filmes está "Um parto de viagem" na minha opinião se utilizou de um ator que só realmente funciona dentro do circulo do "Se beber não case", o ator Zach Galifianakis, o filme basicamente é uma tentativa frustrada de tentar usar a mesma fórmula do filme citado anteriormente mas de uma maneira bem ruim, acabou não agradando ninguém, apesar de dentro desse grupo de filmes não ser o pior em quesito de bilheteria, talvez o hype de usar dois atores tão consagrado em suas franquias pode ter levado a essa quantidade de bilheteria, mas, ao perceber que o filme não era tudo aquilo que se esperava acabou se levando criticas e avaliações negativas dentro desse nicho cinéfilo.
+
+## Grupo: Filmes pipoca(MCU - Marvel Cinematic Universe)
+Dentro desse agrupamento temos filmes que foram realmente aclamados, principalmente formado por filmes da marvel, temos talvez, o melhor personagem adaptado dos quadrinhos dentro do cinema. O Tony Stark e o Robert Downey Jr se confundem em uma só persona, sua atuação é impecável nesses filmes, talvez assim podemos explicar o tamanho sucesso, principalmente por ter sido o pioneiro nos filmes da Marvel no cinema la no começo dos anos 2000 com Iron Man, fez um personagem nem tão conhecido uns 15 anos atrás, hoje quase basicamente representar uma franquia de filmes. Dentro dessa categoria também temos Sherlock Holmes, Trovão Tropical também filmes muito bem avaliados nas maiores plataformas digitais de críticas e avaliações, ou seja, talvez os melhores filmes(para quem curte o gênero).
