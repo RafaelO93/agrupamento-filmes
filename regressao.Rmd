@@ -1,0 +1,63 @@
+---
+title: "Regressao Linear no congresso"
+author: "Rafael Oliveira"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+  html_notebook:
+    fig_width: 7
+    theme: readable
+    toc: yes
+    toc_float: yes
+---
+
+```{r}
+suppressWarnings(library(tidyverse))
+
+library(tidyverse)
+theme_set(theme_bw())
+library(GGally)
+library(ggfortify)
+library(broom)
+require(ISLR)
+library(modelr) # devtools::install_github("hadley/modelr")
+```
+
+```{r}
+atividade = read_csv("atividade-por-perfil-20190322.csv")
+atividade = atividade %>% 
+    filter(!is.na(twitter), !is.na(seguidores) & n_retweet > 0 & n_proprio > 0 & !is.na(engaj_mediano) & engaj_mediano > 0)
+```
+```{r}
+atividade %>% 
+    filter(n_proprio >= 10, !is.na(twitter), !is.na(seguidores), engaj_mediano > 0) %>% 
+    ggplot(aes(x = seguidores, y = engaj_mediano)) + 
+    geom_point() + 
+    scale_y_log10() + 
+    scale_x_log10()
+```
+
+```{r}
+atividade = atividade %>% mutate(engaj_total_log = log(engaj_total), engaj_mediano_log = log(engaj_mediano), seguidores_log = log(seguidores), segue_log = log(segue), n_retweet_log = log(n_retweet), n_proprio_log = log(n_proprio))
+```
+
+```{r}
+multi = lm(engaj_total_log ~ casa + seguidores_log + segue_log + n_retweet_log + n_proprio_log, data = atividade)
+tidy(multi)
+```
+
+
+
+```{r}
+multi = lm(engaj_mediano_log ~ casa + seguidores_log + segue_log + n_retweet_log + n_proprio_log, data = atividade)
+tidy(multi)
+```
+-> Sem os logaritmos a relação entre eles não é muito boa, por isso foi usado o log.
+
+modelo 1:
+
+Regressão linear múltipla foi utilizada para analisar a associação entre Casa, seguidores, quem ele segue, número de retweet, número de tweets próprio. Os resultados da regressão indicam que um modelo no formato Engajamento Total se relacionando com todas as outras variaveis Para a variavel casa, a cada valor de engajamento aumenta numero de seguidores em 0.5647077, diminui quem ele segue em -0.2900894, aumenta o número de retweet em 0.8606482 e diminui o próprio número de tweet em 0.5302352.	
+
+modelo 2:
+Regressão linear múltipla foi utilizada para analisar a associação entre Casa, seguidores, quem ele segue, número de retweet, número de tweets próprio. Os resultados da regressão indicam que um modelo no formato Engajamento Mediano se relacionando com todas as outras variaveis Para a variavel casa, a cada valor de engajamento aumenta numero de seguidores em 0.7438113, diminui quem ele segue em -0.3410067, aumenta o número de retweet em 0.2813467 e diminui o próprio número de tweet em -0.1477701.	
